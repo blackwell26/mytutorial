@@ -1,0 +1,90 @@
+---
+# Eureka Server — headless since it's a discovery service
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka-server
+  labels:
+    app: eureka-server
+    tier: backend
+spec:
+  clusterIP: None
+  ports:
+    - port: 8761
+      targetPort: 8761
+      protocol: TCP
+      name: http
+  selector:
+    app: eureka-server
+---
+# Auth Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+    tier: backend
+spec:
+  clusterIP: None
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+      name: http
+  selector:
+    app: auth-service
+---
+# Grades Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grades-service
+  labels:
+    app: grades-service
+    tier: backend
+spec:
+  clusterIP: None
+  ports:
+    - port: 8082
+      targetPort: 8082
+      protocol: TCP
+      name: http
+  selector:
+    app: grades-service
+---
+# Notification Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+    tier: backend
+spec:
+  clusterIP: None
+  ports:
+    - port: 8083
+      targetPort: 8083
+      protocol: TCP
+      name: http
+  selector:
+    app: notification-service
+---
+# API Gateway — exposed to external traffic via LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  labels:
+    app: api-gateway
+    tier: backend
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: api-gateway

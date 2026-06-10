@@ -1,0 +1,25 @@
+spring:
+  data:
+    redis:
+      host: redis
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    readinessstate:
+      enabled: true
+    livenessstate:
+      enabled: true

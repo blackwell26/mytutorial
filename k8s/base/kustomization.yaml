@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mytutorial
+
+resources:
+  - namespace.yaml
+  - configmaps.yaml
+  - deployments.yaml
+  - services.yaml
+  - hpas.yaml
+  - pdbs.yaml
+  - network-policies.yaml
+  - ../infrastructure/postgres.yaml
+  - ../infrastructure/redis.yaml
+  - ../infrastructure/kafka.yaml
