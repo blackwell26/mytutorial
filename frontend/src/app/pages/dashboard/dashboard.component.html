@@ -1,0 +1,57 @@
+<div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen()">
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="hamburger" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+        <span></span><span></span><span></span>
+      </button>
+      <span class="app-logo">🎓 MyTutorial</span>
+    </div>
+
+    <div class="header-right">
+      @if (currentUser) {
+        <span class="user-badge">
+          <span class="avatar">{{ avatarLetter }}</span>
+          <span class="username">{{ currentUser.username }}</span>
+        </span>
+      }
+      <button class="btn-signout" (click)="signOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- ── Body (sidebar + main) ── -->
+  <div class="app-body">
+
+    <!-- Sidebar / Left nav -->
+    <nav class="sidebar" [class.open]="sidebarOpen()" aria-label="Main navigation">
+      <ul class="nav-list">
+        @for (item of navItems; track item.route) {
+          <li>
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              class="nav-link"
+              [attr.aria-label]="item.label">
+              <span class="nav-icon">{{ item.icon }}</span>
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <!-- Main content area -->
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer class="app-footer">
+    <span>&copy; {{ year }} MyTutorial — Learning Management System</span>
+    <span class="footer-version">v1.0.0</span>
+  </footer>
+
+</div>

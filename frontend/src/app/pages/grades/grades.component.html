@@ -1,0 +1,63 @@
+<div class="page-grades">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <h2>📊 Grades</h2>
+    <p class="page-subtitle">Grade reference lookup</p>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+      <span>Loading grades…</span>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error() && !loading()) {
+    <div class="error-banner">
+      <span>⚠️</span> {{ error() }}
+    </div>
+  }
+
+  <!-- Grades table -->
+  @if (!loading() && !error()) {
+    <div class="card">
+
+      <div class="card-header">
+        <span>All Grades</span>
+        <span class="badge">{{ grades().length }} entries</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="grades-table" aria-label="Grades list">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Grade Number</th>
+              <th scope="col">Grade Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (grade of grades(); track grade.gradeId; let i = $index) {
+              <tr>
+                <td class="row-index">{{ i + 1 }}</td>
+                <td>
+                  <span class="grade-number-badge">{{ grade.gradeNumber }}</span>
+                </td>
+                <td class="grade-name">{{ grade.gradeName }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="empty-row">No grades found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  }
+
+</div>

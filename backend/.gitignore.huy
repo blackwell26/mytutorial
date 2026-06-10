@@ -1,0 +1,22 @@
+# Maven / Java
+target/
+*.class
+
+# IDEs / Editors
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Environment / tooling
+.mvn/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+

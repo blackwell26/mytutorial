@@ -1,0 +1,33 @@
+server:
+  port: 8761                    # Eureka default port — dashboard at http://localhost:8761
+
+spring:
+  application:
+    name: eureka-server
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    # This server does not register with itself or fetch the registry
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  server:
+    # How long (ms) Eureka waits before evicting an instance with no heartbeat
+    eviction-interval-timer-in-ms: 5000
+    # Disable self-preservation in dev — evicts dead instances faster
+    enable-self-preservation: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+logging:
+  level:
+    root: INFO
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN

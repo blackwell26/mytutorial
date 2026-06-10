@@ -1,0 +1,98 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  data:
+    redis:
+      host: 192.168.1.83
+      port: 6379
+      username: default
+      password: mypassword
+      timeout: 5000ms
+
+  cloud:
+    gateway:
+      # Automatically create routes for every service registered in Eureka.
+      # Each service is reachable at /api/<service-name>/** without manual route config.
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      routes:
+        # Auth routes — no JWT filter (public endpoints)
+        - id: auth-signin
+          uri: lb://auth-service          # Eureka resolves auth-service instances
+          predicates:
+            - Path=/api/signin
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: authCircuitBreaker
+                fallbackUri: forward:/fallback
+
+        - id: auth-signup
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/signup
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: authCircuitBreaker
+                fallbackUri: forward:/fallback
+
+        # Grades route — JWT required.
+        # lb://grades-service resolves ALL registered instances automatically.
+        # Start 1, 2, or 10 instances — gateway discovers them all via Eureka.
+        - id: grades
+          uri: lb://grades-service
+          predicates:
+            - Path=/api/grades/**
+          filters:
+            - JwtAuthenticationFilter
+            - name: CircuitBreaker
+              args:
+                name: gradesCircuitBreaker
+                fallbackUri: forward:/fallback
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns: "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - Authorization
+              - Content-Type
+              - X-Authenticated-User
+            exposedHeaders:
+              - Authorization
+            allowCredentials: true
+
+# Eureka client — gateway registers itself and fetches the service registry
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+app:
+  jwt:
+    secret: "3f8a2b1c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a"
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO

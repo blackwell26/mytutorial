@@ -1,0 +1,142 @@
+<div class="auth-wrapper">
+
+  <div class="auth-card">
+
+    <!-- Logo / Brand -->
+    <div class="auth-brand">
+      <span class="brand-icon">🎓</span>
+      <h1>MyTutorial</h1>
+      <p>Learning management system</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'signin'"
+        (click)="switchTab('signin')">
+        Sign In
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'signup'"
+        (click)="switchTab('signup')">
+        Sign Up
+      </button>
+    </div>
+
+    <!-- Error message -->
+    @if (errorMsg()) {
+      <div class="error-banner">
+        <span>⚠️</span> {{ errorMsg() }}
+      </div>
+    }
+
+    <!-- Sign In Form -->
+    @if (activeTab() === 'signin') {
+      <form [formGroup]="signInForm" (ngSubmit)="onSignIn()" class="auth-form">
+
+        <div class="field">
+          <label for="si-username">Username</label>
+          <input
+            id="si-username"
+            type="text"
+            formControlName="username"
+            placeholder="Enter your username"
+            autocomplete="username" />
+          @if (signInForm.get('username')?.touched && signInForm.get('username')?.hasError('required')) {
+            <span class="field-error">Username is required</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="si-password">Password</label>
+          <input
+            id="si-password"
+            type="password"
+            formControlName="password"
+            placeholder="Enter your password"
+            autocomplete="current-password" />
+          @if (signInForm.get('password')?.touched && signInForm.get('password')?.hasError('required')) {
+            <span class="field-error">Password is required</span>
+          }
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading()">
+          @if (!loading()) { Sign In }
+          @if (loading()) { <span class="spinner"></span> }
+        </button>
+
+        <p class="switch-hint">
+          Don't have an account?
+          <a (click)="switchTab('signup')">Create one</a>
+        </p>
+      </form>
+    }
+
+    <!-- Sign Up Form -->
+    @if (activeTab() === 'signup') {
+      <form [formGroup]="signUpForm" (ngSubmit)="onSignUp()" class="auth-form">
+
+        <div class="field">
+          <label for="su-username">Username</label>
+          <input
+            id="su-username"
+            type="text"
+            formControlName="username"
+            placeholder="Choose a username"
+            autocomplete="username" />
+          @if (signUpForm.get('username')?.touched && signUpForm.get('username')?.hasError('required')) {
+            <span class="field-error">Username is required</span>
+          }
+          @if (signUpForm.get('username')?.touched && signUpForm.get('username')?.hasError('minlength')) {
+            <span class="field-error">Minimum 3 characters</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="su-email">Email</label>
+          <input
+            id="su-email"
+            type="email"
+            formControlName="email"
+            placeholder="Enter your email"
+            autocomplete="email" />
+          @if (signUpForm.get('email')?.touched && signUpForm.get('email')?.hasError('required')) {
+            <span class="field-error">Email is required</span>
+          }
+          @if (signUpForm.get('email')?.touched && signUpForm.get('email')?.hasError('email')) {
+            <span class="field-error">Enter a valid email address</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="su-password">Password</label>
+          <input
+            id="su-password"
+            type="password"
+            formControlName="password"
+            placeholder="Create a password (min. 6 chars)"
+            autocomplete="new-password" />
+          @if (signUpForm.get('password')?.touched && signUpForm.get('password')?.hasError('required')) {
+            <span class="field-error">Password is required</span>
+          }
+          @if (signUpForm.get('password')?.touched && signUpForm.get('password')?.hasError('minlength')) {
+            <span class="field-error">Minimum 6 characters</span>
+          }
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading()">
+          @if (!loading()) { Create Account }
+          @if (loading()) { <span class="spinner"></span> }
+        </button>
+
+        <p class="switch-hint">
+          Already have an account?
+          <a (click)="switchTab('signin')">Sign in</a>
+        </p>
+      </form>
+    }
+
+  </div>
+</div>

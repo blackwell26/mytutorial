@@ -1,0 +1,148 @@
+.page-grades {
+  max-width: 860px;
+}
+
+/* Page header */
+.page-header {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a237e;
+  }
+
+  .page-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #757575;
+  }
+}
+
+/* Loading */
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: #616161;
+  font-size: 0.95rem;
+}
+
+.spinner-lg {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e3e6f0;
+  border-top-color: #1a237e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error */
+.error-banner {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  color: #c62828;
+  font-size: 0.875rem;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e8eaf6;
+  font-weight: 600;
+  color: #1a237e;
+  font-size: 0.95rem;
+}
+
+.badge {
+  background: #e8eaf6;
+  color: #3949ab;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 12px;
+}
+
+/* Table */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.grades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  th {
+    background: #f5f6fa;
+    padding: 0.75rem 1.25rem;
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #5c6bc0;
+    border-bottom: 1px solid #e8eaf6;
+  }
+
+  td {
+    padding: 0.8rem 1.25rem;
+    border-bottom: 1px solid #f0f2f8;
+    color: #37474f;
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+    &:hover { background: #f5f6fa; }
+    &:last-child td { border-bottom: none; }
+  }
+}
+
+.row-index {
+  color: #bdbdbd;
+  font-size: 0.82rem;
+  width: 40px;
+}
+
+.grade-number-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 28px;
+  padding: 0 0.5rem;
+  background: #e8eaf6;
+  color: #3949ab;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.grade-name {
+  font-weight: 500;
+  color: #263238;
+}
+
+.empty-row {
+  text-align: center;
+  color: #9e9e9e;
+  padding: 2rem;
+  font-style: italic;
+}

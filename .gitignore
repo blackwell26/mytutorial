@@ -1,0 +1,29 @@
+# Maven / Java
+**/target/
+**/*.class
+
+# Node / front-end
+node_modules/
+.npm/
+.npm-cache/
+package-lock.json
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime / tool output
+.mvn/
+
