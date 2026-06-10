@@ -27,3 +27,4 @@ logs/
 # Runtime / tool output
 .mvn/
 
+.aider*
