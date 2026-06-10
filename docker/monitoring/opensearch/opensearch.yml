@@ -1,0 +1,21 @@
+# OpenSearch configuration for single-node dev
+cluster.name: mytutorial-opensearch
+node.name: opensearch-node1
+path.data: /usr/share/opensearch/data
+path.logs: /usr/share/opensearch/logs
+
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+discovery.type: single-node
+
+# Disable security plugins for local development
+plugins.security.disabled: true
+
+# Memory settings
+bootstrap.memory_lock: true
+
+# Don't expose too much in dev
+http.cors.enabled: true
+http.cors.allow-origin: "*"

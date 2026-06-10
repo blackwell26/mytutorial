@@ -1,0 +1,16 @@
+server.name: opensearch-dashboards
+server.host: "0.0.0.0"
+server.port: 5601
+
+opensearch.hosts: ["http://opensearch:9200"]
+
+# Disable security for local dev
+opensearch.username: ""
+opensearch.password: ""
+opensearch.requestHeadersAllowlist: ["security_tenant", "Authorization"]
+
+opensearch_security.multitenancy.enabled: false
+opensearch_security.enabled: false
+
+# Disable SSL verification
+opensearch.ssl.verificationMode: none

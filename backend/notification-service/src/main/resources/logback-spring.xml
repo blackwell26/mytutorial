@@ -36,6 +36,21 @@
         <appender-ref ref="FILE"/>
     </appender>
 
+    <!-- ── Logstash TCP appender (ELK) ── -->
+    <springProperty scope="context" name="LOGSTASH_HOST" source="logging.logstash.host" defaultValue="logstash"/>
+    <springProperty scope="context" name="LOGSTASH_PORT" source="logging.logstash.port" defaultValue="5000"/>
+
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${LOGSTASH_HOST}:${LOGSTASH_PORT}</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdc>true</includeMdc>
+            <includeContext>true</includeContext>
+            <customFields>{"app_name":"${APP_NAME}"}</customFields>
+        </encoder>
+        <connectionTimeout>5000</connectionTimeout>
+        <keepAliveDuration>30000</keepAliveDuration>
+    </appender>
+
     <logger name="org.springframework"                      level="WARN"/>
     <logger name="org.apache.kafka"                         level="WARN"/>
     <logger name="com.blackwell.mytutorial.notification"    level="DEBUG"/>
@@ -43,6 +58,7 @@
     <root level="${LOG_LEVEL}">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="LOGSTASH"/>
     </root>
 
 </configuration>
