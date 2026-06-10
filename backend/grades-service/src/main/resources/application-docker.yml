@@ -1,0 +1,12 @@
+spring:
+  data:
+    redis:
+      host: redis
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/postgres
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/

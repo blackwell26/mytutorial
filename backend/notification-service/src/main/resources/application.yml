@@ -41,6 +41,20 @@ app:
     from-email: your-email@gmail.com
     from-name: MyTutorial Team
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
 logging:
   level:
     root: INFO

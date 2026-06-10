@@ -1,0 +1,14 @@
+**/target/
+**/.classpath
+**/.project
+**/.settings
+**/.factorypath
+**/.classpath
+**/.git
+**/.gitignore
+**/.gitkeep
+**/*.md
+**/node_modules/
+**/.angular/
+**/.editorconfig
+**/.prettierrc

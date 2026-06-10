@@ -28,3 +28,7 @@ logs/
 .mvn/
 
 .aider*
+
+# Docker
+**/target/docker/
+docker-volumes/
