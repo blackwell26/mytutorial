@@ -1,0 +1,96 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: auth-service-pipeline
+  labels:
+    app: auth-service
+spec:
+  params:
+    - name: repo-url
+      type: string
+      default: https://github.com/your-org/mytutorial.git
+    - name: revision
+      type: string
+      default: main
+    - name: image-tag
+      type: string
+      default: latest
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: test
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: maven
+          - name: namespace
+            value: mytutorial
+      params:
+        - name: GOALS
+          value: ["-B", "test", "-q"]
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+          subPath: backend
+
+    - name: build-image
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: image-registry.openshift-image-registry.svc:5000/mytutorial/auth-service:$(params.image-tag)
+        - name: DOCKERFILE
+          value: ./backend/auth-service/Dockerfile
+        - name: CONTEXT
+          value: .
+        - name: TLSVERIFY
+          value: "false"
+        - name: FORMAT
+          value: oci
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      runAfter:
+        - test
+
+    - name: deploy
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: openshift-client
+          - name: namespace
+            value: mytutorial
+      params:
+        - name: SCRIPT
+          value: |
+            oc rollout restart deployment/auth-service -n mytutorial
+            oc rollout status deployment/auth-service -n mytutorial --timeout=300s
+      runAfter:
+        - build-image
+
+    - name: health-check
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: openshift-client
+          - name: namespace
+            value: mytutorial
+      params:
+        - name: SCRIPT
+          value: |
+            sleep 5
+            oc run health-check --image=curlimages/curl --restart=Never -- \
+              curl -sf http://auth-service:8081/actuator/health
+            oc delete pod health-check --ignore-not-found
+      runAfter:
+        - deploy

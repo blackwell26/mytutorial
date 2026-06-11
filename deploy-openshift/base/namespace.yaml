@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mytutorial
+  annotations:
+    openshift.io/display-name: "MyTutorial Application"
+    openshift.io/description: "MyTutorial Microservices Backend"

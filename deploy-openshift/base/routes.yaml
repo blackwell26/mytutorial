@@ -1,0 +1,67 @@
+apiVersion: route.openshift.io/v1
+kind: List
+items:
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: api-gateway
+      annotations:
+        haproxy.router.openshift.io/rewrite-target: /
+        haproxy.router.openshift.io/timeout: 30s
+    spec:
+      to:
+        kind: Service
+        name: api-gateway
+      port:
+        targetPort: 8080
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: eureka-server
+    spec:
+      to:
+        kind: Service
+        name: eureka-server
+      port:
+        targetPort: 8761
+      tls:
+        termination: edge
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: auth-service
+    spec:
+      to:
+        kind: Service
+        name: auth-service
+      port:
+        targetPort: 8081
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: prometheus
+    spec:
+      to:
+        kind: Service
+        name: prometheus
+      port:
+        targetPort: 9090
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: grafana
+    spec:
+      to:
+        kind: Service
+        name: grafana
+      port:
+        targetPort: 3000
+      tls:
+        termination: edge

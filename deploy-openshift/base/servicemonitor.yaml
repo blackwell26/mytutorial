@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mytutorial-monitor
+  labels:
+    release: k8s
+spec:
+  selector:
+    matchLabels:
+      tier: backend
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+  namespaceSelector:
+    matchNames:
+      - mytutorial

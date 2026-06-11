@@ -1,0 +1,117 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: eureka-server
+  labels:
+    app: eureka-server
+spec:
+  source:
+    git:
+      uri: https://github.com/your-org/mytutorial.git
+      ref: main
+    contextDir: backend
+  strategy:
+    dockerStrategy:
+      dockerfilePath: eureka-server/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: eureka-server:latest
+  triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secretReference:
+          name: github-webhook-secret
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+spec:
+  source:
+    git:
+      uri: https://github.com/your-org/mytutorial.git
+      ref: main
+    contextDir: backend
+  strategy:
+    dockerStrategy:
+      dockerfilePath: auth-service/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: auth-service:latest
+  triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secretReference:
+          name: github-webhook-secret
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: grades-service
+  labels:
+    app: grades-service
+spec:
+  source:
+    git:
+      uri: https://github.com/your-org/mytutorial.git
+      ref: main
+    contextDir: backend
+  strategy:
+    dockerStrategy:
+      dockerfilePath: grades-service/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: grades-service:latest
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+spec:
+  source:
+    git:
+      uri: https://github.com/your-org/mytutorial.git
+      ref: main
+    contextDir: backend
+  strategy:
+    dockerStrategy:
+      dockerfilePath: notification-service/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: notification-service:latest
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: api-gateway
+  labels:
+    app: api-gateway
+spec:
+  source:
+    git:
+      uri: https://github.com/your-org/mytutorial.git
+      ref: main
+    contextDir: backend
+  strategy:
+    dockerStrategy:
+      dockerfilePath: api-gateway/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: api-gateway:latest
+  triggers:
+    - type: ConfigChange

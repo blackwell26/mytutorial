@@ -1,0 +1,276 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: mytutorial
+  annotations:
+    description: "MyTutorial Microservices Stack — Spring Boot backend with PostgreSQL, Redis, Kafka"
+    tags: "spring-boot,java,microservices,postgresql,redis,kafka"
+    iconClass: "icon-spring"
+    openshift.io/display-name: "MyTutorial"
+    openshift.io/provider-display-name: "MyTutorial Team"
+parameters:
+  - name: APPLICATION_DOMAIN
+    description: Public domain for the API gateway route
+    value: api-mytutorial.apps.ocp.example.com
+  - name: DB_PASSWORD
+    description: PostgreSQL password
+    generate: expression
+    from: "[a-zA-Z0-9]{16}"
+  - name: DB_STORAGE_SIZE
+    description: PostgreSQL persistent storage size
+    value: "5Gi"
+  - name: KAFKA_STORAGE_SIZE
+    description: Kafka persistent storage size
+    value: "5Gi"
+  - name: AUTH_REPLICAS
+    value: "2"
+  - name: GRADES_REPLICAS
+    value: "2"
+  - name: GATEWAY_REPLICAS
+    value: "2"
+  - name: NOTIFICATION_REPLICAS
+    value: "1"
+  - name: EUREKA_REPLICAS
+    value: "1"
+  - name: CPU_REQUEST
+    value: "300m"
+  - name: MEM_REQUEST
+    value: "512Mi"
+  - name: CPU_LIMIT
+    value: "1"
+  - name: MEM_LIMIT
+    value: "1Gi"
+objects:
+# ── Namespace ──
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: mytutorial
+
+# ── Service Account ──
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: mytutorial-sa
+
+# ── PostgreSQL ──
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: postgres
+  spec:
+    serviceName: postgres
+    replicas: 1
+    selector:
+      matchLabels:
+        app: postgres
+    template:
+      metadata:
+        labels:
+          app: postgres
+      spec:
+        containers:
+          - name: postgres
+            image: postgres:16-alpine
+            ports:
+              - containerPort: 5432
+            env:
+              - name: POSTGRES_DB
+                value: postgres
+              - name: POSTGRES_USER
+                value: postgres
+              - name: POSTGRES_PASSWORD
+                value: ${DB_PASSWORD}
+            volumeMounts:
+              - name: postgres-data
+                mountPath: /var/lib/postgresql/data
+        volumeClaimTemplates:
+          - metadata:
+              name: postgres-data
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: ${DB_STORAGE_SIZE}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: postgres
+  spec:
+    ports:
+      - port: 5432
+    selector:
+      app: postgres
+
+# ── Redis ──
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: redis
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: redis
+    template:
+      metadata:
+        labels:
+          app: redis
+      spec:
+        containers:
+          - name: redis
+            image: redis:7-alpine
+            ports:
+              - containerPort: 6379
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: redis
+  spec:
+    ports:
+      - port: 6379
+    selector:
+      app: redis
+
+# ── Application: Base pattern for each service ──
+# eureka-server
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: eureka-server
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    name: eureka-server
+  spec:
+    replicas: ${{EUREKA_REPLICAS}}
+    selector:
+      app: eureka-server
+    triggers:
+      - type: ConfigChange
+      - type: ImageChange
+        imageChangeParams:
+          automatic: true
+          containerNames:
+            - eureka-server
+          from:
+            kind: ImageStreamTag
+            name: eureka-server:latest
+    template:
+      metadata:
+        labels:
+          app: eureka-server
+          tier: backend
+      spec:
+        serviceAccountName: mytutorial-sa
+        containers:
+          - name: eureka-server
+            image: eureka-server:latest
+            ports:
+              - containerPort: 8761
+            env:
+              - name: SPRING_PROFILES_ACTIVE
+                value: "k8s"
+            livenessProbe:
+              httpGet:
+                path: /actuator/health/liveness
+                port: 8761
+              initialDelaySeconds: 40
+              periodSeconds: 15
+            readinessProbe:
+              httpGet:
+                path: /actuator/health/readiness
+                port: 8761
+              initialDelaySeconds: 20
+              periodSeconds: 10
+            resources:
+              requests: { cpu: ${CPU_REQUEST}, memory: ${MEM_REQUEST} }
+              limits: { cpu: ${CPU_LIMIT}, memory: ${MEM_LIMIT} }
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: eureka-server
+  spec:
+    clusterIP: None
+    ports:
+      - port: 8761
+    selector:
+      app: eureka-server
+
+# ── API Gateway + Route ──
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: api-gateway
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    name: api-gateway
+  spec:
+    replicas: ${{GATEWAY_REPLICAS}}
+    selector:
+      app: api-gateway
+    triggers:
+      - type: ConfigChange
+      - type: ImageChange
+        imageChangeParams:
+          automatic: true
+          containerNames:
+            - api-gateway
+          from:
+            kind: ImageStreamTag
+            name: api-gateway:latest
+    template:
+      metadata:
+        labels:
+          app: api-gateway
+          tier: backend
+      spec:
+        serviceAccountName: mytutorial-sa
+        containers:
+          - name: api-gateway
+            image: api-gateway:latest
+            ports:
+              - containerPort: 8080
+            env:
+              - name: SPRING_PROFILES_ACTIVE
+                value: "k8s"
+              - name: SPRING_DATA_REDIS_HOST
+                value: redis
+              - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+                value: http://eureka-server:8761/eureka/
+            livenessProbe:
+              httpGet: { path: /actuator/health/liveness, port: 8080 }
+              initialDelaySeconds: 50; periodSeconds: 15
+            readinessProbe:
+              httpGet: { path: /actuator/health/readiness, port: 8080 }
+              initialDelaySeconds: 25; periodSeconds: 10
+            resources:
+              requests: { cpu: ${CPU_REQUEST}, memory: ${MEM_REQUEST} }
+              limits: { cpu: ${CPU_LIMIT}, memory: ${MEM_LIMIT} }
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: api-gateway
+  spec:
+    ports:
+      - port: 80
+        targetPort: 8080
+    selector:
+      app: api-gateway
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: api-gateway
+    annotations:
+      haproxy.router.openshift.io/rewrite-target: /
+  spec:
+    host: ${APPLICATION_DOMAIN}
+    to:
+      kind: Service
+      name: api-gateway
+    port:
+      targetPort: 8080
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
