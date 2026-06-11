@@ -1,0 +1,29 @@
+[
+  {
+    "name": "eureka-server",
+    "image": "${ECR_REGISTRY}/mytutorial/eureka-server:${IMAGE_TAG}",
+    "portMappings": [{ "containerPort": 8761, "protocol": "tcp" }],
+    "environment": [
+      { "name": "SPRING_PROFILES_ACTIVE", "value": "k8s" },
+      { "name": "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE", "value": "http://eureka-server:8761/eureka/" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/mytutorial/eureka-server",
+        "awslogs-region": "${AWS_REGION}",
+        "awslogs-stream-prefix": "ecs",
+        "awslogs-create-group": "true"
+      }
+    },
+    "healthCheck": {
+      "command": ["CMD-SHELL", "curl -sf http://localhost:8761/actuator/health || exit 1"],
+      "interval": 15,
+      "timeout": 5,
+      "retries": 3,
+      "startPeriod": 40
+    },
+    "cpu": 256,
+    "memory": 512
+  }
+]
