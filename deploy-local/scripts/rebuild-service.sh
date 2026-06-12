@@ -26,7 +26,7 @@ echo "--- Building ${SERVICE} ---"
 docker build -f "${SERVICE}/Dockerfile" -t "mytutorial/${SERVICE}:latest" .
 echo ""
 
-cd ../"deploy local"
+cd ../"deploy-local"
 
 # Restart the deployment
 echo "--- Restarting deployment ---"

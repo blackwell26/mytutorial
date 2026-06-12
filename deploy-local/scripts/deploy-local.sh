@@ -29,7 +29,7 @@ for svc in eureka-server auth-service grades-service notification-service api-ga
   echo "  Building $svc..."
   docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -1
 done
-cd ../"deploy local"
+cd ../"deploy-local"
 echo ""
 
 # 4. Create namespace

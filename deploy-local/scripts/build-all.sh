@@ -25,7 +25,7 @@ for svc in eureka-server auth-service grades-service notification-service api-ga
     . 2>&1 | tail -1
 done
 
-cd ../"deploy local"
+cd ../"deploy-local"
 
 # Verify images
 echo ""
