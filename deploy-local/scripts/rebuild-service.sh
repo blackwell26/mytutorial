@@ -2,6 +2,9 @@
 # scripts/rebuild-service.sh
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
+
 SERVICE="${1:-}"
 NAMESPACE="${NAMESPACE:-mytutorial}"
 
@@ -11,11 +14,22 @@ if [ -z "$SERVICE" ]; then
   exit 1
 fi
 
+# Verify required tools
+command -v minikube >/dev/null 2>&1 || { echo "ERROR: minikube not found"; exit 1; }
+command -v kubectl >/dev/null 2>&1 || { echo "ERROR: kubectl not found"; exit 1; }
+command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found"; exit 1; }
+
 echo "=== Rebuilding and restarting ${SERVICE} ==="
 
+# Ensure minikube is running
+minikube status 2>/dev/null | grep -q "Running" || {
+  echo "ERROR: Minikube is not running. Start it first: minikube start"
+  exit 1
+}
+
 # Build the image
-eval $(minikube docker-env)
-cd ../../backend
+eval "$(minikube docker-env)"
+cd "$PROJECT_DIR"
 
 if [ ! -f "${SERVICE}/Dockerfile" ]; then
   echo "ERROR: No Dockerfile found at backend/${SERVICE}/Dockerfile"
@@ -23,10 +37,10 @@ if [ ! -f "${SERVICE}/Dockerfile" ]; then
 fi
 
 echo "--- Building ${SERVICE} ---"
-docker build -f "${SERVICE}/Dockerfile" -t "mytutorial/${SERVICE}:latest" .
+docker build -f "${SERVICE}/Dockerfile" -t "mytutorial/${SERVICE}:latest" . 2>&1 | tail -n 1
 echo ""
 
-cd ../"deploy-local"
+cd "$SCRIPT_DIR"
 
 # Restart the deployment
 echo "--- Restarting deployment ---"

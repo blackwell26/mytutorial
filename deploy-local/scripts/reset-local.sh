@@ -2,17 +2,24 @@
 # scripts/reset-local.sh
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
+
 echo "╔══════════════════════════════════════════════════╗"
 echo "║   WARNING: This will destroy everything!        ║"
 echo "║   Minikube will be deleted and recreated.       ║"
 echo "╚══════════════════════════════════════════════════╝"
 echo ""
-read -p "Are you sure? (y/N): " confirm
+read -r -p "Are you sure? (y/N): " confirm
 
 if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
   echo "Cancelled."
   exit 0
 fi
+
+# Verify required tools
+command -v minikube >/dev/null 2>&1 || { echo "ERROR: minikube not found"; exit 1; }
+command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found"; exit 1; }
 
 echo ""
 echo "=== Deleting Minikube cluster ==="
@@ -30,13 +37,13 @@ minikube addons enable dashboard
 echo ""
 
 echo "=== Building images ==="
-eval $(minikube docker-env)
-cd ../../backend
+eval "$(minikube docker-env)"
+cd "$PROJECT_DIR"
 for svc in eureka-server auth-service grades-service notification-service api-gateway; do
   echo "  Building $svc..."
-  docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -1
+  docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -n 1
 done
-cd ../"deploy-local"
+cd "$SCRIPT_DIR"
 echo ""
 
 echo ""

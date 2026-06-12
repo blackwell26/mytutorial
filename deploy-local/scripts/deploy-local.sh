@@ -2,11 +2,21 @@
 # scripts/deploy-local.sh
 set -euo pipefail
 
-ENV=${1:-dev}
-NAMESPACE=${NAMESPACE:-mytutorial}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
+INFRA_DIR="$SCRIPT_DIR/../infrastructure"
+
+ENV="${1:-dev}"
+NAMESPACE="${NAMESPACE:-mytutorial}"
 
 echo "=== Deploying MyTutorial to Minikube (${ENV}) ==="
 echo ""
+
+# Verify required tools
+command -v minikube >/dev/null 2>&1 || { echo "ERROR: minikube not found"; exit 1; }
+command -v kubectl >/dev/null 2>&1 || { echo "ERROR: kubectl not found"; exit 1; }
+command -v kustomize >/dev/null 2>&1 || { echo "ERROR: kustomize not found"; exit 1; }
+command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found"; exit 1; }
 
 # 1. Start minikube if not running
 if ! minikube status 2>/dev/null | grep -q "Running"; then
@@ -23,13 +33,13 @@ echo ""
 
 # 3. Build images
 echo "--- Building images ---"
-eval $(minikube docker-env)
-cd ../../backend
+eval "$(minikube docker-env)"
+cd "$PROJECT_DIR"
 for svc in eureka-server auth-service grades-service notification-service api-gateway; do
   echo "  Building $svc..."
-  docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -1
+  docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -n 1
 done
-cd ../"deploy-local"
+cd "$SCRIPT_DIR"
 echo ""
 
 # 4. Create namespace
@@ -39,7 +49,11 @@ echo ""
 
 # 5. Deploy infrastructure
 echo "--- Deploying infrastructure (Postgres, Redis, Kafka) ---"
-kubectl apply -f infrastructure/ -n "${NAMESPACE}"
+if [ -d "$INFRA_DIR" ]; then
+  kubectl apply -f "$INFRA_DIR/" -n "${NAMESPACE}"
+else
+  echo "  WARNING: Infrastructure directory not found at $INFRA_DIR"
+fi
 echo ""
 
 # 6. Wait for infrastructure
@@ -49,8 +63,14 @@ kubectl wait --for=condition=ready pod -l app=redis -n "${NAMESPACE}" --timeout=
 echo ""
 
 # 7. Deploy application
-echo "--- Deploying application (${ENV}) ---"
-kustomize build "overlays/${ENV}" | kubectl apply -n "${NAMESPACE}" -f -
+OVERLAY_DIR="$SCRIPT_DIR/../overlays/${ENV}"
+if [ -d "$OVERLAY_DIR" ]; then
+  echo "--- Deploying application (${ENV}) ---"
+  kustomize build "$OVERLAY_DIR" | kubectl apply -n "${NAMESPACE}" -f -
+else
+  echo "  ERROR: Overlay directory not found: $OVERLAY_DIR"
+  exit 1
+fi
 echo ""
 
 # 8. Wait for application
@@ -63,11 +83,15 @@ echo ""
 
 # 9. Deploy monitoring
 echo "--- Deploying monitoring (Prometheus, Grafana, ELK) ---"
-kubectl apply -f infrastructure/prometheus.yaml -n "${NAMESPACE}" 2>/dev/null || true
-kubectl apply -f infrastructure/grafana.yaml -n "${NAMESPACE}" 2>/dev/null || true
-kubectl apply -f infrastructure/elk.yaml -n "${NAMESPACE}" 2>/dev/null || true
+for manifest in prometheus grafana elk; do
+  manifest_file="$INFRA_DIR/${manifest}.yaml"
+  if [ -f "$manifest_file" ]; then
+    kubectl apply -f "$manifest_file" -n "${NAMESPACE}" 2>/dev/null || true
+  fi
+done
 
 # 10. Summary
+MINIKUBE_IP="$(minikube ip 2>/dev/null || echo '<minikube-ip>')"
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║              Deployment Complete                        ║"
@@ -83,7 +107,7 @@ echo "║    Grafana:      kubectl port-forward -n ${NAMESPACE} service/grafana 
 echo "║    OpenSearch:   kubectl port-forward -n ${NAMESPACE} service/opensearch-dashboards 5601:5601 ║"
 echo "║                                                        ║"
 echo "║  Ingress (add to /etc/hosts):                          ║"
-echo "║    echo \"$(minikube ip) api.mytutorial.local\" | sudo tee -a /etc/hosts  ║"
+echo "║    echo \"${MINIKUBE_IP} api.mytutorial.local\" | sudo tee -a /etc/hosts  ║"
 echo "║    Then open: http://api.mytutorial.local              ║"
 echo "║                                                        ║"
 echo "║  Minikube Dashboard:                                   ║"

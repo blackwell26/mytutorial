@@ -203,7 +203,7 @@ for svc in eureka-server auth-service grades-service notification-service api-ga
     .
 done
 
-cd ../"deploy local"
+cd ../"deploy-local"
 ```
 
 ### 4.3 Build Script
@@ -230,7 +230,7 @@ for svc in eureka-server auth-service grades-service notification-service api-ga
     -t "mytutorial/$svc:latest" \
     .
 done
-cd ../"deploy local"
+cd ../"deploy-local"
 
 # List images inside minikube
 echo ""
@@ -247,7 +247,7 @@ echo "=== Build complete ==="
 eval $(minikube docker-env)
 cd ../../backend
 docker build -f auth-service/Dockerfile -t mytutorial/auth-service:latest .
-cd ../"deploy local"
+cd ../"deploy=local"
 kubectl rollout restart deployment/auth-service -n mytutorial
 ```
 
@@ -337,7 +337,7 @@ for svc in eureka-server auth-service grades-service notification-service api-ga
   echo "Building $svc..."
   docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -1
 done
-cd ../"deploy local"
+cd ../"deploy-local"
 
 # 4. Create namespace
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
@@ -704,7 +704,7 @@ kubectl scale deployment/auth-service --replicas=5 -n mytutorial
 eval $(minikube docker-env)
 cd ../../backend
 docker build -f auth-service/Dockerfile -t mytutorial/auth-service:latest .
-cd ../"deploy local"
+cd ../"deploy-local"
 kubectl rollout restart deployment/auth-service -n mytutorial
 
 # Monitor rollout
@@ -885,7 +885,7 @@ pipeline {
         }
         stage('Deploy') {
             steps {
-                dir('"deploy local"') {
+                dir('"deploy-local"') {
                     sh 'kustomize build overlays/dev | kubectl apply -n mytutorial -f -'
                 }
             }
@@ -938,7 +938,7 @@ build:
 deploy:
   stage: deploy
   script:
-    - cd "deploy local"
+    - cd "deploy-local"
     - kustomize build overlays/dev | kubectl apply -n $NAMESPACE -f -
     - for svc in eureka-server auth-service grades-service notification-service api-gateway; do
         kubectl rollout status "deployment/$svc" -n $NAMESPACE --timeout=120s;
@@ -979,7 +979,7 @@ jobs:
 
       - name: Deploy
         run: |
-          cd "deploy local"
+          cd "deploy-local"
           kubectl apply -f base/namespace.yaml
           kubectl apply -f infrastructure/ -n mytutorial
           kustomize build overlays/dev | kubectl apply -n mytutorial -f -
@@ -1156,7 +1156,7 @@ docker images | grep mytutorial
 ### Directory Structure
 
 ```
-deploy local/
+deploy-local/
 ├── README.md                          ← This file (complete guide)
 ├── base/
 │   ├── namespace.yaml                 ← mytutorial namespace
@@ -1192,7 +1192,7 @@ deploy local/
 
 ### Key Differences from Cloud `k8s/` Directory
 
-| Aspect | `k8s/` (Cloud) | `deploy local/` (Minikube) |
+| Aspect | `k8s/` (Cloud) | `deploy-local/` (Minikube) |
 |--------|----------------|-----------------------------|
 | **Image registry** | ECR/ACR/GCR URL | `mytutorial/svc:latest` (local) |
 | **Image pull policy** | `Always` | `IfNotPresent` (or `Never`) |
