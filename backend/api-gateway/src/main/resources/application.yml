@@ -107,6 +107,14 @@ management:
       application: ${spring.application.name}
 
 logging:
+  file:
+    name: "logs/application.log"
   level:
-    root: INFO
-    org.springframework.cloud.gateway: INFO
+    'org.apache.catalina': INFO
+    'org.apache.coyote': INFO
+    'org.apache.tomcat': INFO
+    'org.springframework.cloud.gateway': INFO
+  root: INFO
+    
+
+
