@@ -19,7 +19,8 @@ command -v kustomize >/dev/null 2>&1 || { echo "ERROR: kustomize not found"; exi
 command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found"; exit 1; }
 
 # 1. Start minikube if not running
-if ! minikube status 2>/dev/null | grep -q "Running"; then
+minikube_status=$(minikube status 2>/dev/null || true)
+if ! echo "$minikube_status" | grep -q "host:"; then
   echo "--- Starting Minikube ---"
   minikube start --cpus 4 --memory 8192 --disk-size 20g
   echo ""
@@ -31,15 +32,20 @@ minikube addons enable ingress 2>/dev/null || true
 minikube addons enable metrics-server 2>/dev/null || true
 echo ""
 
-# 3. Build images
+# 3. Build images (host Docker, then load into minikube)
 echo "--- Building images ---"
-eval "$(minikube docker-env)"
 cd "$PROJECT_DIR"
 for svc in eureka-server auth-service grades-service notification-service api-gateway; do
   echo "  Building $svc..."
   docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -n 1
 done
 cd "$SCRIPT_DIR"
+echo ""
+echo "--- Loading images into Minikube ---"
+for svc in eureka-server auth-service grades-service notification-service api-gateway; do
+  echo "  Loading mytutorial/$svc:latest..."
+  minikube image load "mytutorial/$svc:latest" 2>&1 | tail -n 1
+done
 echo ""
 
 # 4. Create namespace

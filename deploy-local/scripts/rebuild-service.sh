@@ -22,13 +22,13 @@ command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found"; exit 1; }
 echo "=== Rebuilding and restarting ${SERVICE} ==="
 
 # Ensure minikube is running
-minikube status 2>/dev/null | grep -q "Running" || {
+minikube_status=$(minikube status 2>/dev/null || true)
+if ! echo "$minikube_status" | grep -q "host:"; then
   echo "ERROR: Minikube is not running. Start it first: minikube start"
   exit 1
-}
+fi
 
-# Build the image
-eval "$(minikube docker-env)"
+# Build the image (host Docker, then load into minikube)
 cd "$PROJECT_DIR"
 
 if [ ! -f "${SERVICE}/Dockerfile" ]; then
@@ -38,6 +38,10 @@ fi
 
 echo "--- Building ${SERVICE} ---"
 docker build -f "${SERVICE}/Dockerfile" -t "mytutorial/${SERVICE}:latest" . 2>&1 | tail -n 1
+echo ""
+
+echo "--- Loading image into Minikube ---"
+minikube image load "mytutorial/${SERVICE}:latest" 2>&1 | tail -n 1
 echo ""
 
 cd "$SCRIPT_DIR"

@@ -5,38 +5,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
 
-echo "=== Building all MyTutorial images into Minikube ==="
+echo "=== Building all MyTutorial images (host Docker) and loading into Minikube ==="
 echo ""
 
 # Verify required tools
-command -v minikube >/dev/null 2>&1 || { echo "ERROR: minikube not found. Install: sudo dnf install minikube"; exit 1; }
-command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found. Install: sudo dnf install docker-ce"; exit 1; }
+command -v minikube >/dev/null 2>&1 || { echo "ERROR: minikube not found."; exit 1; }
+command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found."; exit 1; }
 
-# Ensure minikube is running
-minikube status 2>/dev/null | grep -q "Running" || {
-  echo "ERROR: Minikube is not running. Start it first: minikube start"
-  exit 1
-}
-
-# Verify Docker can talk to Minikube's daemon
+# Verify Docker daemon is accessible (host Docker, not minikube's)
 if ! docker info >/dev/null 2>&1; then
   echo "ERROR: Cannot connect to Docker daemon."
   echo "  On CentOS 9, ensure your user is in the 'docker' group:"
   echo "    sudo usermod -aG docker \$USER && newgrp docker"
-  echo "  Or run the script with: sudo -E $(basename "$0")"
   exit 1
 fi
 
-# Point to minikube's Docker daemon
-eval "$(minikube docker-env)"
-
-# Verify we're in minikube's Docker
-if ! docker info 2>/dev/null | grep -qi "minikube"; then
-  echo "ERROR: Docker not pointed at minikube. Run: eval \$(minikube docker-env)"
+# Ensure minikube is running (check just the host, as kubelet may be stopped)
+minikube_status=$(minikube status 2>/dev/null || true)
+if ! echo "$minikube_status" | grep -q "host:"; then
+  echo "ERROR: Minikube is not running. Start it: minikube start"
   exit 1
 fi
 
-# Build backend services
+# Build backend services using host Docker daemon (minikube's Docker has no DNS)
 cd "$PROJECT_DIR"
 
 for svc in eureka-server auth-service grades-service notification-service api-gateway; do
@@ -49,10 +40,19 @@ done
 
 cd "$SCRIPT_DIR"
 
+# Load images into minikube
+echo ""
+echo "--- Loading images into Minikube ---"
+for svc in eureka-server auth-service grades-service notification-service api-gateway; do
+  echo "Loading mytutorial/$svc:latest..."
+  minikube image load "mytutorial/$svc:latest" 2>&1 | tail -n 1
+done
+
 # Verify images
 echo ""
-echo "=== Images in Minikube's Docker ==="
-docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep mytutorial
+echo "=== Images in Minikube ==="
+minikube image ls --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null | grep mytutorial || \
+  minikube image ls | grep mytutorial
 
 echo ""
 echo "=== Build complete ==="

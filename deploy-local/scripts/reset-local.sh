@@ -36,14 +36,20 @@ minikube addons enable metrics-server
 minikube addons enable dashboard
 echo ""
 
-echo "=== Building images ==="
-eval "$(minikube docker-env)"
+echo "=== Building images (host Docker, then load into minikube) ==="
 cd "$PROJECT_DIR"
 for svc in eureka-server auth-service grades-service notification-service api-gateway; do
   echo "  Building $svc..."
   docker build -f "$svc/Dockerfile" -t "mytutorial/$svc:latest" . 2>&1 | tail -n 1
 done
 cd "$SCRIPT_DIR"
+echo ""
+
+echo "--- Loading images into Minikube ---"
+for svc in eureka-server auth-service grades-service notification-service api-gateway; do
+  echo "  Loading mytutorial/$svc:latest..."
+  minikube image load "mytutorial/$svc:latest" 2>&1 | tail -n 1
+done
 echo ""
 
 echo ""
