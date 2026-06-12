@@ -11,13 +11,13 @@ COPY notification-service/pom.xml ./notification-service/
 COPY api-gateway/pom.xml ./api-gateway/
 
 # Resolve dependencies (offline cache)
-RUN mvn -B dependency:go-offline -q || true
+RUN "mvn -B dependency:go-offline -q || true"
 
 # Copy all source code
 COPY . ./
 
 # Build only the eureka-server module and its dependencies
-RUN mvn -B clean package -pl eureka-server -am -DskipTests -q
+RUN "mvn -B clean package -pl eureka-server -am -DskipTests -q"
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
