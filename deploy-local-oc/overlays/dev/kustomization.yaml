@@ -13,4 +13,4 @@ patches:
         path: /spec/replicas
         value: 1
     target:
-      kind: Deployment
+      kind: DeploymentConfig

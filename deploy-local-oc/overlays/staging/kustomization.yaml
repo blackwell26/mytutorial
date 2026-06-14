@@ -13,7 +13,7 @@ patches:
         path: /spec/replicas
         value: 2
     target:
-      kind: Deployment
+      kind: DeploymentConfig
       name: auth-service|grades-service|api-gateway
   - patch: |-
       - op: replace

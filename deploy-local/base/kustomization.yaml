@@ -4,11 +4,11 @@ kind: Kustomization
 namespace: mytutorial
 
 resources:
-  - namespace.yaml
-  - configmaps.yaml
-  - deployments.yaml
-  - services.yaml
-  - hpas.yaml
-  - pdbs.yaml
-  - network-policies.yaml
-  - ingress.yaml
+- namespace.yaml
+- configmaps.yaml
+- deployments.yaml
+- services.yaml
+- hpas.yaml
+- pdbs.yaml
+- network-policies.yaml
+- ingress.yaml

@@ -6,7 +6,6 @@ resources:
 
 commonLabels:
   environment: production
-  app.kubernetes.io/env: production
 
 patches:
   - patch: |-
