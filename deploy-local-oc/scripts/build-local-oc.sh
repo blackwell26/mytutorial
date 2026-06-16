@@ -6,8 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
 PROJECT="${PROJECT:-mytutorial}"
 
-# Get external OpenShift registry URL (works from host, unlike internal svc URL)
-REGISTRY="${REGISTRY:-$(oc registry info 2>/dev/null)}"
+# Get external OpenShift registry URL (use --public for host-side access)
+PUBLIC_REGISTRY="${PUBLIC_REGISTRY:-$(oc registry info --public 2>/dev/null)}"
+REGISTRY="${REGISTRY:-${PUBLIC_REGISTRY:-$(oc registry info 2>/dev/null)}}"
 if [ -z "$REGISTRY" ]; then
   echo "ERROR: Could not determine OpenShift registry URL. Ensure you're logged in."
   exit 1
@@ -26,7 +27,7 @@ oc get project "${PROJECT}" > /dev/null 2>&1 || oc new-project "${PROJECT}" --sk
 # Login to registry
 echo "--- Logging into registry: ${REGISTRY} ---"
 podman login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY}" --tls-verify=false 2>/dev/null || \
-  docker login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY}" 2>/dev/null || {
+  docker login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY}" --tls-verify=false 2>/dev/null || {
   echo "  Warning: Could not log into registry."
 }
 

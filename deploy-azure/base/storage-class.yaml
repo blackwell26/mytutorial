@@ -1,0 +1,28 @@
+---
+# Azure managed-premium SSD StorageClass (default for AKS)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azure-premium-ssd
+provisioner: disk.csi.azure.com
+parameters:
+  skuname: Premium_LRS
+  cachingMode: ReadOnly
+  kind: Managed
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+---
+# Azure standard SSD (cheaper, for lower-tier workloads)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azure-standard-ssd
+provisioner: disk.csi.azure.com
+parameters:
+  skuname: StandardSSD_LRS
+  cachingMode: ReadOnly
+  kind: Managed
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true

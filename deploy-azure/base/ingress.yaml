@@ -1,0 +1,39 @@
+---
+# Application Gateway Ingress (AGIC) — terminates TLS at Azure edge
+# Prerequisites:
+#   - Azure Application Gateway v2 with WAF
+#   - AGIC add-on enabled on AKS cluster
+#   - TLS certificate stored in Key Vault or uploaded to App Gateway
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway-ingress
+  annotations:
+    # AGIC (Application Gateway Ingress Controller)
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/health-probe-path: "/actuator/health/readiness"
+    appgw.ingress.kubernetes.io/health-probe-interval: "30"
+    # Cookie-based affinity
+    appgw.ingress.kubernetes.io/cookie-based-affinity: "true"
+    # Request timeout (seconds)
+    appgw.ingress.kubernetes.io/request-timeout: "60"
+    # WAF policy (optional)
+    # appgw.ingress.kubernetes.io/waf-policy-name: "mytutorial-waf-policy"
+spec:
+  ingressClassName: azure-application-gateway
+  tls:
+    - hosts:
+        - api.mytutorial.example.com
+      # Secret must contain the TLS cert or reference Key Vault
+      secretName: mytutorial-tls
+  rules:
+    - host: api.mytutorial.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
