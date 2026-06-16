@@ -1,0 +1,4 @@
+# EC2 profile for eureka-server
+# Self-preservation disabled for demo
+eureka.server.enable-self-preservation: false
+eureka.server.eviction-interval-timer-in-ms: 5000

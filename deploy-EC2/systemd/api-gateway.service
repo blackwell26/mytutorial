@@ -1,0 +1,23 @@
+[Unit]
+Description=MyTutorial API Gateway
+Documentation=https://github.com/example/mytutorial
+After=network.target redis.service eureka-server.service auth-service.service grades-service.service
+Wants=network.target
+BindsTo=eureka-server.service
+
+[Service]
+Type=simple
+User=mytutorial
+Group=mytutorial
+WorkingDirectory=/opt/mytutorial/api-gateway
+Environment="SPRING_PROFILES_ACTIVE=ec2"
+Environment="SPRING_CONFIG_ADDITIONAL_LOCATION=/opt/mytutorial/config/api-gateway/"
+ExecStart=/usr/bin/java -jar /opt/mytutorial/api-gateway/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

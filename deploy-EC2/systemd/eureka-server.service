@@ -1,0 +1,22 @@
+[Unit]
+Description=MyTutorial Eureka Server
+Documentation=https://github.com/example/mytutorial
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=mytutorial
+Group=mytutorial
+WorkingDirectory=/opt/mytutorial/eureka-server
+Environment="SPRING_PROFILES_ACTIVE=ec2"
+Environment="SPRING_CONFIG_ADDITIONAL_LOCATION=/opt/mytutorial/config/eureka-server/"
+ExecStart=/usr/bin/java -jar /opt/mytutorial/eureka-server/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

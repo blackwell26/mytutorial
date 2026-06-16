@@ -1,0 +1,23 @@
+[Unit]
+Description=MyTutorial Notification Service
+Documentation=https://github.com/example/mytutorial
+After=network.target kafka.service eureka-server.service
+Wants=network.target
+BindsTo=eureka-server.service
+
+[Service]
+Type=simple
+User=mytutorial
+Group=mytutorial
+WorkingDirectory=/opt/mytutorial/notification-service
+Environment="SPRING_PROFILES_ACTIVE=ec2"
+Environment="SPRING_CONFIG_ADDITIONAL_LOCATION=/opt/mytutorial/config/notification-service/"
+ExecStart=/usr/bin/java -jar /opt/mytutorial/notification-service/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

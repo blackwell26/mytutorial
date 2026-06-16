@@ -1,0 +1,23 @@
+[Unit]
+Description=MyTutorial Auth Service
+Documentation=https://github.com/example/mytutorial
+After=network.target postgresql.service redis.service kafka.service eureka-server.service
+Wants=network.target
+BindsTo=eureka-server.service
+
+[Service]
+Type=simple
+User=mytutorial
+Group=mytutorial
+WorkingDirectory=/opt/mytutorial/auth-service
+Environment="SPRING_PROFILES_ACTIVE=ec2"
+Environment="SPRING_CONFIG_ADDITIONAL_LOCATION=/opt/mytutorial/config/auth-service/"
+ExecStart=/usr/bin/java -jar /opt/mytutorial/auth-service/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
