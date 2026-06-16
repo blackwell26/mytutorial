@@ -1,0 +1,485 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  MyTutorial Serverless — Spring Boot microservices as Lambda functions
+  behind API Gateway HTTP API, with EventBridge for async events.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Runtime: provided.al2023
+    Architectures: [x86_64]
+    Tracing: Active
+    Environment:
+      Variables:
+        SPRING_PROFILES_ACTIVE: serverless
+        JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Xmx512m
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  JwtSecret:
+    Type: String
+    Default: 3f8a2b1c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a
+    NoEcho: true
+  DbPassword:
+    Type: String
+    Default: mypassword
+    NoEcho: true
+
+Resources:
+
+  # ──────────────────────────────────────────────
+  # API Gateway HTTP API
+  # ──────────────────────────────────────────────
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Environment
+      CorsConfiguration:
+        AllowOrigins: ["http://localhost:4200"]
+        AllowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        AllowHeaders: ["Authorization", "Content-Type", "X-Requested-With"]
+        AllowCredentials: true
+        MaxAge: 600
+
+  # ──────────────────────────────────────────────
+  # Lambda Authorizer (JWT validation)
+  # ──────────────────────────────────────────────
+  JwtAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub mytutorial-${Environment}-authorizer
+      CodeUri: authorizer/
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+            - Effect: Allow
+              Action: [logs:CreateLogStream, logs:PutLogEvents]
+              Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mytutorial-${Environment}-authorizer:*
+
+  # ──────────────────────────────────────────────
+  # Auth Service Lambda (signin / signup)
+  # ──────────────────────────────────────────────
+  AuthServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub mytutorial-${Environment}-auth-service
+      PackageType: Image
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/mytutorial-${Environment}-auth-service:latest
+      MemorySize: 1536
+      Timeout: 30
+      Environment:
+        Variables:
+          SPRING_PROFILES_ACTIVE: serverless
+          # Override these per-environment via SSM in production
+          SPRING_DATASOURCE_URL: !Sub "jdbc:postgresql://${AuroraCluster.Endpoint.Address}:5432/mytutorial"
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: !Ref DbPassword
+          SPRING_DATA_REDIS_HOST: !GetAtt RedisCluster.Endpoint.Address
+          SPRING_DATA_REDIS_PORT: !GetAtt RedisCluster.Endpoint.Port
+          SPRING_DATA_REDIS_PASSWORD: !Ref DbPassword
+          EVENT_BUS_NAME: !Ref AuthEventBus
+          APP_JWT_SECRET: !Ref JwtSecret
+          APP_JWT_EXPIRATION_MS: '86400000'
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: events:PutEvents
+              Resource: !GetAtt AuthEventBus.Arn
+      VpcConfig:
+        SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+        SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      AutoPublishAlias: live
+      Events:
+        SignIn:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/signin
+            Method: POST
+            Auth:
+              Authorizer: NONE
+        SignUp:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/signup
+            Method: POST
+            Auth:
+              Authorizer: NONE
+
+  # Auth service Lambda version (for traffic shifting)
+  AuthServiceFunctionVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref AuthServiceFunction
+
+  # ──────────────────────────────────────────────
+  # Grades Service Lambda (protected endpoints)
+  # ──────────────────────────────────────────────
+  GradesServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub mytutorial-${Environment}-grades-service
+      PackageType: Image
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/mytutorial-${Environment}-grades-service:latest
+      MemorySize: 1024
+      Timeout: 30
+      Environment:
+        Variables:
+          SPRING_PROFILES_ACTIVE: serverless
+          SPRING_DATASOURCE_URL: !Sub "jdbc:postgresql://${AuroraCluster.Endpoint.Address}:5432/mytutorial"
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: !Ref DbPassword
+          SPRING_DATA_REDIS_HOST: !GetAtt RedisCluster.Endpoint.Address
+          SPRING_DATA_REDIS_PORT: !GetAtt RedisCluster.Endpoint.Port
+          SPRING_DATA_REDIS_PASSWORD: !Ref DbPassword
+          APP_JWT_SECRET: !Ref JwtSecret
+      VpcConfig:
+        SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+        SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      AutoPublishAlias: live
+      Events:
+        ListGrades:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/grades
+            Method: GET
+            Auth:
+              Authorizer: !GetAtt JwtAuthorizer.Arn
+              AuthorizationScopes: []
+        GetGrade:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/grades/{gradeNumber}
+            Method: GET
+            Auth:
+              Authorizer: !GetAtt JwtAuthorizer.Arn
+              AuthorizationScopes: []
+
+  # ──────────────────────────────────────────────
+  # Notification Service Lambda (EventBridge consumer)
+  # ──────────────────────────────────────────────
+  NotificationServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub mytutorial-${Environment}-notification-service
+      PackageType: Image
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/mytutorial-${Environment}-notification-service:latest
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          SPRING_PROFILES_ACTIVE: serverless
+          NOTIFICATION_FROM_EMAIL: noreply@mytutorial.com
+          NOTIFICATION_FROM_NAME: MyTutorial Team
+          # SES config (optional — remove if not using email)
+          # SPRING_MAIL_HOST: email-smtp.us-east-1.amazonaws.com
+          # SPRING_MAIL_PORT: '587'
+          # SPRING_MAIL_USERNAME: !Ref SesSmtpUsername
+          # SPRING_MAIL_PASSWORD: !Ref SesSmtpPassword
+      VpcConfig:
+        SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+        SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      AutoPublishAlias: live
+      Events:
+        AuthEventRule:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref AuthEventBus
+            Pattern:
+              source:
+                - com.mytutorial.auth
+              detail-type:
+                - USER_REGISTERED
+                - USER_SIGNED_IN
+
+  # ──────────────────────────────────────────────
+  # EventBridge — replaces Kafka
+  # ──────────────────────────────────────────────
+  AuthEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub mytutorial-${Environment}-auth-events
+
+  # ──────────────────────────────────────────────
+  # Aurora Serverless v2 (PostgreSQL)
+  # ──────────────────────────────────────────────
+  AuroraSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Aurora Serverless
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      EngineVersion: '16.4'
+      EngineMode: provisioned
+      DBClusterIdentifier: !Sub mytutorial-${Environment}
+      MasterUsername: postgres
+      MasterUserPassword: !Ref DbPassword
+      DatabaseName: mytutorial
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0.5
+        MaxCapacity: 4
+      DBSubnetGroupName: !Ref AuroraSubnetGroup
+      VpcSecurityGroupIds: [!Ref DatabaseSecurityGroup]
+      EnableHttpEndpoint: true  # Data API (preview)
+      BackupRetentionPeriod: 7
+      DeletionProtection: false  # Set true in production
+
+  AuroraInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: db.serverless
+      DBInstanceIdentifier: !Sub mytutorial-${Environment}-instance
+      PubliclyAccessible: false
+
+  # ──────────────────────────────────────────────
+  # ElastiCache Serverless (Redis)
+  # ──────────────────────────────────────────────
+  RedisCluster:
+    Type: AWS::ElastiCache::ServerlessCache
+    Properties:
+      ServerlessCacheName: !Sub mytutorial-${Environment}
+      Engine: redis
+      MajorEngineVersion: '7'
+      KmsKeyId: !Ref CacheKmsKey
+      SecurityGroupIds: [!Ref CacheSecurityGroup]
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      CacheUsageLimits:
+        DataStorage:
+          Maximum: 10  # GB
+          Unit: GB
+        ECPUPerSecond:
+          Maximum: 2000
+
+  # ──────────────────────────────────────────────
+  # Networking — VPC with private subnets
+  # ──────────────────────────────────────────────
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub mytutorial-${Environment}
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+
+  # VPC Endpoints for Lambda to access services without NAT Gateway
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !Ref Vpc
+      RouteTableIds: [!Ref PrivateRouteTable1, !Ref PrivateRouteTable2]
+
+  DynamoDBEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      VpcId: !Ref Vpc
+      RouteTableIds: [!Ref PrivateRouteTable1, !Ref PrivateRouteTable2]
+
+  ECRDockerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      VpcId: !Ref Vpc
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      PrivateDnsEnabled: true
+
+  ECRApiEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      VpcId: !Ref Vpc
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      PrivateDnsEnabled: true
+
+  LogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcId: !Ref Vpc
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      PrivateDnsEnabled: true
+
+  EventsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.events
+      VpcId: !Ref Vpc
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      PrivateDnsEnabled: true
+
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcId: !Ref Vpc
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref LambdaSecurityGroup]
+      PrivateDnsEnabled: true
+
+  # Route tables for VPC endpoints
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  # ──────────────────────────────────────────────
+  # Security Groups
+  # ──────────────────────────────────────────────
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Lambda functions
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Aurora
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ElastiCache
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  # ──────────────────────────────────────────────
+  # KMS Key for ElastiCache encryption
+  # ──────────────────────────────────────────────
+  CacheKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for ElastiCache Serverless
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+      Enabled: true
+
+  CacheKmsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/mytutorial-${Environment}-cache
+      TargetKeyId: !Ref CacheKmsKey
+
+  # ──────────────────────────────────────────────
+  # Dashboard — API Gateway endpoints summary
+  # ──────────────────────────────────────────────
+  ApiGatewayUrlOutput:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /mytutorial/${Environment}/api-gateway-url
+      Type: String
+      Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+
+  AuthServiceFunction:
+    Description: Auth Service Lambda ARN
+    Value: !GetAtt AuthServiceFunction.Arn
+
+  GradesServiceFunction:
+    Description: Grades Service Lambda ARN
+    Value: !GetAtt GradesServiceFunction.Arn
+
+  NotificationServiceFunction:
+    Description: Notification Service Lambda ARN
+    Value: !GetAtt NotificationServiceFunction.Arn
+
+  EventBusName:
+    Description: EventBridge event bus name
+    Value: !Ref AuthEventBus
+
+  AuroraEndpoint:
+    Description: Aurora cluster endpoint
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+
+  RedisEndpoint:
+    Description: ElastiCache endpoint
+    Value: !Sub "${RedisCluster.Endpoint.Address}:${RedisCluster.Endpoint.Port}"

@@ -1,0 +1,6 @@
+{
+  "name": "mytutorial-authorizer",
+  "version": "1.0.0",
+  "description": "JWT Lambda Authorizer for MyTutorial API Gateway",
+  "private": true
+}

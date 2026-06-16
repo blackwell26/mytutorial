@@ -1,0 +1,29 @@
+# Serverless profile overrides for grades-service
+
+spring.datasource.url: jdbc:postgresql://${SPRING_DATASOURCE_URL:localhost}:5432/mytutorial
+spring.datasource.username: ${SPRING_DATASOURCE_USERNAME:postgres}
+spring.datasource.password: ${SPRING_DATASOURCE_PASSWORD:mypassword}
+spring.datasource.hikari.maximum-pool-size: 5
+spring.datasource.hikari.minimum-idle: 2
+spring.datasource.hikari.connection-timeout: 10000
+
+spring.data.redis.host: ${SPRING_DATA_REDIS_HOST:localhost}
+spring.data.redis.port: ${SPRING_DATA_REDIS_PORT:6379}
+spring.data.redis.password: ${SPRING_DATA_REDIS_PASSWORD:mypassword}
+spring.data.redis.timeout: 5000ms
+
+spring.cache.type: redis
+spring.cache.redis.time-to-live: 600000
+
+# Disable Eureka
+eureka.client.enabled: false
+eureka.client.register-with-eureka: false
+eureka.client.fetch-registry: false
+
+# JWT (for direct invocation fallback)
+app.jwt.secret: ${APP_JWT_SECRET:3f8a2b1c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a}
+
+# Serverless-specific: the X-Authenticated-User header is set by API Gateway
+# authorizer, so downstream services trust it. This profile ensures the
+# grades-service JwtAuthFilter prioritizes that header correctly.
+app.auth.header-name: X-Authenticated-User

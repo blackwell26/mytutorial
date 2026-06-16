@@ -1,0 +1,33 @@
+version = 0.1
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "mytutorial-serverless-dev"
+s3_bucket = "mytutorial-serverless-dev-deploy"
+s3_prefix = "dev/sam"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=dev"
+tags = "Environment=dev Project=mytutorial"
+
+[staging]
+[staging.deploy]
+[staging.deploy.parameters]
+stack_name = "mytutorial-serverless-staging"
+s3_bucket = "mytutorial-serverless-staging-deploy"
+s3_prefix = "staging/sam"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=staging"
+tags = "Environment=staging Project=mytutorial"
+
+[prod]
+[prod.deploy]
+[prod.deploy.parameters]
+stack_name = "mytutorial-serverless-prod"
+s3_bucket = "mytutorial-serverless-prod-deploy"
+s3_prefix = "prod/sam"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=prod"
+tags = "Environment=prod Project=mytutorial"

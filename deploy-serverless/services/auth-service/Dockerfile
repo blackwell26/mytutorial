@@ -1,0 +1,29 @@
+# Dockerfile for auth-service — Lambda Web Adapter
+# Build stage
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+
+COPY backend/pom.xml ./
+COPY backend/eureka-server/pom.xml ./eureka-server/
+COPY backend/auth-service/pom.xml ./auth-service/
+COPY backend/grades-service/pom.xml ./grades-service/
+COPY backend/notification-service/pom.xml ./notification-service/
+COPY backend/api-gateway/pom.xml ./api-gateway/
+
+RUN mvn dependency:go-offline -q
+
+COPY backend/ .
+
+RUN mvn -B clean package -pl auth-service -am -DskipTests -q
+
+# Runtime — AWS Lambda Web Adapter base image
+FROM public.ecr.aws/aws-greengrass/blipp/temurin:21-jre-21.0.6_7-jre-headless
+
+COPY --from=build /app/auth-service/target/*.jar /app.jar
+
+# Lambda Web Adapter reads this env var to know which port to forward to
+ENV AWS_LAMBDA_EXEC_WRAPPER=/opt/aws-lambda-rie
+ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=serverless
+
+ENTRYPOINT ["java", "-jar", "/app.jar"]

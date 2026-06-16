@@ -1,0 +1,25 @@
+# Serverless profile overrides for notification-service
+# Consumes from EventBridge (invoked directly by EventBridge rule)
+
+# Disable Kafka consumer — EventBridge invokes the Lambda directly
+spring.autoconfigure.exclude:
+  - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+
+# Disable Eureka
+eureka.client.enabled: false
+eureka.client.register-with-eureka: false
+eureka.client.fetch-registry: false
+
+# SMTP config via SES
+spring.mail.host: ${SPRING_MAIL_HOST:email-smtp.us-east-1.amazonaws.com}
+spring.mail.port: ${SPRING_MAIL_PORT:587}
+spring.mail.username: ${SPRING_MAIL_USERNAME:}
+spring.mail.password: ${SPRING_MAIL_PASSWORD:}
+spring.mail.properties.mail.smtp.auth: true
+spring.mail.properties.mail.smtp.starttls.enable: true
+
+app.notification.from-email: ${NOTIFICATION_FROM_EMAIL:noreply@mytutorial.com}
+app.notification.from-name: ${NOTIFICATION_FROM_NAME:MyTutorial Team}
+
+# Disable the Kafka consumer flag — let EventBridge handle routing
+app.kafka.enabled: false
