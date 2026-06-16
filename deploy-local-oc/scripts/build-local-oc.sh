@@ -4,8 +4,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
-REGISTRY="${REGISTRY:-image-registry.openshift-image-registry.svc:5000}"
 PROJECT="${PROJECT:-mytutorial}"
+
+# Get external OpenShift registry URL (works from host, unlike internal svc URL)
+REGISTRY="${REGISTRY:-$(oc registry info 2>/dev/null)}"
+if [ -z "$REGISTRY" ]; then
+  echo "ERROR: Could not determine OpenShift registry URL. Ensure you're logged in."
+  exit 1
+fi
 SERVICES=("eureka-server" "auth-service" "grades-service" "notification-service" "api-gateway")
 
 echo "=== Building & pushing MyTutorial images to OpenShift Internal Registry ==="
@@ -21,7 +27,7 @@ oc get project "${PROJECT}" > /dev/null 2>&1 || oc new-project "${PROJECT}" --sk
 echo "--- Logging into registry: ${REGISTRY} ---"
 podman login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY}" --tls-verify=false 2>/dev/null || \
   docker login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY}" 2>/dev/null || {
-  echo "  Warning: Could not log into registry. Trying local port-forward..."
+  echo "  Warning: Could not log into registry."
 }
 
 echo ""

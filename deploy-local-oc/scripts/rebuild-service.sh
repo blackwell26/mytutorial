@@ -4,8 +4,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../backend" && pwd)"
-REGISTRY="${REGISTRY:-image-registry.openshift-image-registry.svc:5000}"
 PROJECT="${PROJECT:-mytutorial}"
+
+# Get external OpenShift registry URL (works from host, unlike internal svc URL)
+REGISTRY="${REGISTRY:-$(oc registry info 2>/dev/null)}"
+if [ -z "$REGISTRY" ]; then
+  echo "ERROR: Could not determine OpenShift registry URL. Ensure you're logged in."
+  exit 1
+fi
 
 SERVICE="${1:-}"
 NAMESPACE="${NAMESPACE:-mytutorial}"
