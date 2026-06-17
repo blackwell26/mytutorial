@@ -1,0 +1,33 @@
+---
+# API Gateway — ensure at least 1 pod stays up during voluntary disruptions
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+# Auth Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: auth-service
+---
+# Grades Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: grades-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: grades-service

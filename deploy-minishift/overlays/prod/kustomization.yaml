@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+commonLabels:
+  environment: prod
+  app.kubernetes.io/env: prod
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: DeploymentConfig
+      labelSelector: "app in (auth-service, grades-service, api-gateway)"
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: DeploymentConfig
+      labelSelector: "app in (notification-service, eureka-server)"
+  - patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 10
+    target:
+      kind: HorizontalPodAutoscaler
+      labelSelector: "app in (auth-service, grades-service, api-gateway)"
