@@ -17,7 +17,7 @@ RUN mvn -B dependency:go-offline -q || true
 COPY . ./
 
 # Build only the eureka-server module and its dependencies
-RUN mvn -B clean package -pl eureka-server -am -DskipTests -q
+RUN mvn -B clean package -pl eureka-server -am -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
