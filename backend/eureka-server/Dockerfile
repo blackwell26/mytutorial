@@ -23,8 +23,15 @@ RUN mvn -B clean package -pl eureka-server -am -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Install curl for downloading the OTel agent
+RUN apk add --no-cache curl
+
+# Download OpenTelemetry Java agent
+RUN curl -sL -o /app/opentelemetry-javaagent.jar \
+    https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.10.0/opentelemetry-javaagent.jar
+
 COPY --from=build /app/eureka-server/target/*.jar app.jar
 
 EXPOSE 8761
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-javaagent:/app/opentelemetry-javaagent.jar", "-jar", "app.jar"]

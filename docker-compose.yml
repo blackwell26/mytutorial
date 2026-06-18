@@ -73,6 +73,14 @@ services:
       - "8761:8761"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_SERVICE_NAME=eureka-server
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
+      - OTEL_LOGS_EXPORTER_OTLP_INSECURE=true
     networks:
       - mytutorial-net
     healthcheck:
@@ -90,6 +98,14 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_SERVICE_NAME=auth-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
+      - OTEL_LOGS_EXPORTER_OTLP_INSECURE=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,6 +127,14 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_SERVICE_NAME=grades-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
+      - OTEL_LOGS_EXPORTER_OTLP_INSECURE=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,6 +154,14 @@ services:
       - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_SERVICE_NAME=notification-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
+      - OTEL_LOGS_EXPORTER_OTLP_INSECURE=true
     depends_on:
       kafka:
         condition: service_started
@@ -147,6 +179,14 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
+      - OTEL_LOGS_EXPORTER_OTLP_INSECURE=true
     depends_on:
       redis:
         condition: service_healthy
@@ -156,6 +196,20 @@ services:
         condition: service_started
       grades-service:
         condition: service_started
+    networks:
+      - mytutorial-net
+
+  # ── OpenTelemetry Collector ───────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.112.0
+    container_name: mytutorial-otel
+    command: ["--config=/etc/otel/config.yml"]
+    volumes:
+      - ./docker/otel/otel-collector-config.yml:/etc/otel/config.yml
+    ports:
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+      - "8889:8889"     # Prometheus exporter (OTel metrics)
     networks:
       - mytutorial-net
 
